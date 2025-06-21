@@ -16,6 +16,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const { isAuthenticated, loading, login, configError } = useAuth()
   const [loginError, setLoginError] = useState<string | null>(null)
 
+  // Show loading state during SSR and initial client load
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

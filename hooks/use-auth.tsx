@@ -21,6 +21,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [configError, setConfigError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") {
+      setLoading(false)
+      return
+    }
+
     // Check configuration first
     if (!isAppwriteConfigured()) {
       setConfigError("Appwrite configuration is incomplete. Please check your environment variables.")
@@ -58,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Login error:", error)
       // Only throw if it's not a redirect-related error
-      if (!error.message?.includes("redirect") && !error.message?.includes("OAuth")) {
+      if (error instanceof Error && !error.message?.includes("redirect") && !error.message?.includes("OAuth")) {
         throw error
       }
     }

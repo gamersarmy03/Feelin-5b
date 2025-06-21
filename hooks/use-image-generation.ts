@@ -80,7 +80,7 @@ export function useImageGeneration() {
           // Download the image as blob
           const imageBlob = await storageService.downloadImageAsBlob(data.imageUrl)
 
-          // Upload to Internet Archive
+          // Upload to Internet Archive via server API
           const uploadResult = await storageService.uploadToInternetArchive(imageBlob, `${data.id}.png`, {
             title: `AI Generated Image: ${prompt.slice(0, 50)}`,
             description: `Generated with prompt: "${prompt}" using ${data.provider}`,
@@ -92,7 +92,7 @@ export function useImageGeneration() {
           console.log("Successfully uploaded to Internet Archive:", archiveUrl)
         } catch (uploadError) {
           console.error("Failed to upload to Internet Archive:", uploadError)
-          // Continue without archive URL
+          // Continue without archive URL - don't fail the entire generation
         }
       }
 
@@ -112,7 +112,7 @@ export function useImageGeneration() {
           })
         } catch (dbError) {
           console.error("Failed to save to database:", dbError)
-          // Continue without saving to database
+          // Continue without saving to database - don't fail the entire generation
         }
       }
 

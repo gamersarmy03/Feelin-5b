@@ -1,4 +1,4 @@
-// Internet Archive S3 storage service
+// Client-side storage service (no sensitive credentials)
 export interface UploadResult {
   url: string
   archiveUrl: string
@@ -6,7 +6,7 @@ export interface UploadResult {
 }
 
 export const storageService = {
-  // Upload image to Internet Archive
+  // Upload image to Internet Archive via server API
   async uploadToInternetArchive(
     imageBlob: Blob,
     filename: string,
@@ -18,56 +18,37 @@ export const storageService = {
     },
   ): Promise<UploadResult> {
     try {
-      const accessKey = process.env.NEXT_PUBLIC_INTERNET_ARCHIVE_ACCESS_KEY
-      const secretKey = process.env.NEXT_PUBLIC_INTERNET_ARCHIVE_SECRET_KEY
+      // Convert blob to base64 for API transmission
+      const imageData = await blobToBase64(imageBlob)
 
-      if (!accessKey || !secretKey) {
-        throw new Error("Internet Archive credentials not configured")
-      }
-
-      // Generate unique identifier for Internet Archive
-      const timestamp = Date.now()
-      const identifier = `ai-generated-image-${timestamp}`
-
-      // Create form data for upload
-      const formData = new FormData()
-      formData.append("file", imageBlob, filename)
-
-      // Add metadata
-      formData.append("name", identifier)
-      formData.append("title", metadata.title)
-      formData.append("description", metadata.description)
-      formData.append("creator", metadata.creator)
-      formData.append("subject", metadata.subject)
-      formData.append("mediatype", "image")
-      formData.append("collection", "opensource_media")
-
-      // Upload to Internet Archive
-      const uploadUrl = `https://s3.us.archive.org/${identifier}/${filename}`
-
-      const response = await fetch(`/api/upload-to-archive`, {
+      // Call server-side API to handle the upload
+      const response = await fetch("/api/upload-to-archive", {
         method: "POST",
-        body: JSON.stringify({
-          identifier,
-          filename,
-          metadata,
-          imageData: await blobToBase64(imageBlob),
-        }),
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          filename,
+          metadata,
+          imageData,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to upload to Internet Archive")
+        const errorData = await response.json().catch(() => ({ error: "Upload failed" }))
+        throw new Error(errorData.error || "Failed to upload to Internet Archive")
       }
 
       const result = await response.json()
 
+      if (!result.success) {
+        throw new Error(result.error || "Upload failed")
+      }
+
       return {
-        url: uploadUrl,
-        archiveUrl: `https://archive.org/details/${identifier}`,
-        identifier,
+        url: result.url,
+        archiveUrl: result.archiveUrl,
+        identifier: result.identifier,
       }
     } catch (error) {
       console.error("Error uploading to Internet Archive:", error)

@@ -3,14 +3,25 @@ import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
-    const { identifier, filename, metadata, imageData } = await request.json()
+    const { filename, metadata, imageData } = await request.json()
 
+    // Get credentials from server-side environment variables
     const accessKey = process.env.INTERNET_ARCHIVE_ACCESS_KEY
     const secretKey = process.env.INTERNET_ARCHIVE_SECRET_KEY
 
     if (!accessKey || !secretKey) {
-      return NextResponse.json({ error: "Internet Archive credentials not configured" }, { status: 500 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Internet Archive credentials not configured",
+        },
+        { status: 500 },
+      )
     }
+
+    // Generate unique identifier for Internet Archive
+    const timestamp = Date.now()
+    const identifier = `ai-generated-image-${timestamp}`
 
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(imageData, "base64")
@@ -47,7 +58,13 @@ export async function POST(request: NextRequest) {
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text()
       console.error("Internet Archive upload failed:", uploadResponse.status, errorText)
-      throw new Error(`Upload failed: ${uploadResponse.status}`)
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Upload failed: ${uploadResponse.status}`,
+        },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({
@@ -58,6 +75,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Upload to Internet Archive error:", error)
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Upload failed" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Upload failed",
+      },
+      { status: 500 },
+    )
   }
 }

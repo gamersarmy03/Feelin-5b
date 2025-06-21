@@ -12,11 +12,18 @@ export const authService = {
   // Google OAuth login
   async loginWithGoogle() {
     try {
-      // Get the current origin, with fallback for SSR
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+      // Use environment variable or fallback for redirect URLs
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
 
-      // Create the OAuth session with proper URL construction
-      await account.createOAuth2Session(OAuthProvider.Google, `${origin}/auth/callback`, `${origin}/auth/failure`)
+      const successUrl = `${baseUrl}/auth/callback`
+      const failureUrl = `${baseUrl}/auth/failure`
+
+      console.log("OAuth URLs:", { successUrl, failureUrl })
+
+      // Create the OAuth session
+      await account.createOAuth2Session(OAuthProvider.Google, successUrl, failureUrl)
     } catch (error) {
       console.error("Google login error:", error)
       throw error
