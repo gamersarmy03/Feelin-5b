@@ -12,15 +12,38 @@ export const authService = {
   // Google OAuth login
   async loginWithGoogle() {
     try {
-      // Use environment variable or fallback for redirect URLs
-      const baseUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
+      // Get the base URL safely
+      let baseUrl: string
+
+      if (typeof window !== "undefined") {
+        // Client-side: use window.location
+        baseUrl = `${window.location.protocol}//${window.location.host}`
+      } else {
+        // Server-side: use environment variable or default
+        baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      }
+
+      // Validate the base URL
+      try {
+        new URL(baseUrl)
+      } catch (urlError) {
+        console.error("Invalid base URL:", baseUrl)
+        throw new Error("Invalid application URL configuration")
+      }
 
       const successUrl = `${baseUrl}/auth/callback`
       const failureUrl = `${baseUrl}/auth/failure`
 
-      console.log("OAuth URLs:", { successUrl, failureUrl })
+      console.log("OAuth URLs:", { baseUrl, successUrl, failureUrl })
+
+      // Validate the constructed URLs
+      try {
+        new URL(successUrl)
+        new URL(failureUrl)
+      } catch (urlError) {
+        console.error("Invalid OAuth URLs:", { successUrl, failureUrl })
+        throw new Error("Failed to construct valid OAuth redirect URLs")
+      }
 
       // Create the OAuth session
       await account.createOAuth2Session(OAuthProvider.Google, successUrl, failureUrl)

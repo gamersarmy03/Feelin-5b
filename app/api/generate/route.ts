@@ -39,23 +39,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Map aspect ratios to dimensions
-    const dimensionMap: { [key: string]: { width: number; height: number } } = {
-      "1:1": { width: 512, height: 512 },
-      "16:9": { width: 768, height: 432 },
-      "9:16": { width: 432, height: 768 },
+    // Map aspect ratios to Imagen 3.0 format
+    const aspectRatioMap: { [key: string]: string } = {
+      "1:1": "1:1",
+      "16:9": "16:9",
+      "9:16": "9:16",
     }
 
     // Enhance prompt based on style
     let enhancedPrompt = prompt.trim()
     if (style && style !== "auto") {
       const stylePrompts: { [key: string]: string } = {
-        realistic: "photorealistic, high quality, detailed, 8k",
-        "digital-art": "digital art, concept art, artstation trending",
-        painting: "oil painting, artistic, painterly, fine art",
-        anime: "anime style, manga, japanese animation style",
-        "3d-render": "3D render, CGI, octane render, unreal engine",
-        minimalist: "minimalist, clean, simple design, geometric",
+        realistic: "photorealistic, high quality, detailed, professional photography",
+        "digital-art": "digital art, concept art, trending on artstation, highly detailed",
+        painting: "oil painting, artistic, painterly, fine art, masterpiece",
+        anime: "anime style, manga, japanese animation style, cel shading",
+        "3d-render": "3D render, CGI, octane render, unreal engine, highly detailed",
+        minimalist: "minimalist, clean, simple design, geometric, modern",
       }
 
       if (stylePrompts[style]) {
@@ -63,74 +63,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const dimensions = dimensionMap[aspectRatio || "1:1"]
+    console.log("Generating image with Imagen 3.0:", enhancedPrompt)
 
-    console.log("Generating image with enhanced prompt:", enhancedPrompt)
-
-    // Try Pollinations AI as primary free service
+    // Use Google's Imagen 3.0 via Vertex AI
     try {
-      console.log("Attempting Pollinations AI generation...")
-
-      // Use enhanced parameters for better quality and no watermarks
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${dimensions.width}&height=${dimensions.height}&seed=${Date.now()}&model=flux&nologo=true&enhance=true&quality=high`
-
-      const pollinationsResponse = await fetch(pollinationsUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; IdeogramClone/1.0)",
-        },
-      })
-
-      if (pollinationsResponse.ok) {
-        const contentType = pollinationsResponse.headers.get("content-type")
-        if (contentType && contentType.startsWith("image/")) {
-          return NextResponse.json({
-            success: true,
-            imageUrl: pollinationsUrl,
-            id: Date.now().toString(),
-            prompt: prompt,
-            style: style || "auto",
-            aspectRatio: aspectRatio || "1:1",
-            provider: "Pollinations AI (Free)",
-            note: "Generated using free Pollinations AI service",
-          })
-        }
-      }
-    } catch (pollinationsError) {
-      console.error("Pollinations AI error:", pollinationsError)
-    }
-
-    // Try Hugging Face as fallback
-    try {
-      console.log("Attempting Hugging Face generation as fallback...")
-
-      const hfResponse = await fetch(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+      const imagenResponse = await fetch(
+        "https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT_ID/locations/us-central1/publishers/google/models/imagen-3.0-generate-002:predict",
         {
           method: "POST",
           headers: {
+            Authorization: `Bearer ${process.env.GOOGLE_CLOUD_ACCESS_TOKEN}`,
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; IdeogramClone/1.0)",
           },
           body: JSON.stringify({
-            inputs: enhancedPrompt,
+            instances: [
+              {
+                prompt: enhancedPrompt,
+              },
+            ],
             parameters: {
-              num_inference_steps: 25,
-              guidance_scale: 8.0,
-              width: dimensions.width,
-              height: dimensions.height,
+              sampleCount: 1,
+              aspectRatio: aspectRatioMap[aspectRatio || "1:1"],
+              safetyFilterLevel: "block_some",
+              personGeneration: "allow_adult",
             },
           }),
         },
       )
 
-      if (hfResponse.ok) {
-        const contentType = hfResponse.headers.get("content-type")
-        if (contentType && contentType.startsWith("image/")) {
-          const imageBlob = await hfResponse.blob()
-          const buffer = await imageBlob.arrayBuffer()
-          const base64 = Buffer.from(buffer).toString("base64")
-          const dataUrl = `data:${contentType};base64,${base64}`
+      if (imagenResponse.ok) {
+        const data = await imagenResponse.json()
+
+        if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
+          const base64Image = data.predictions[0].bytesBase64Encoded
+          const dataUrl = `data:image/png;base64,${base64Image}`
 
           return NextResponse.json({
             success: true,
@@ -139,17 +105,20 @@ export async function POST(request: NextRequest) {
             prompt: prompt,
             style: style || "auto",
             aspectRatio: aspectRatio || "1:1",
-            provider: "Hugging Face (Free)",
-            note: "Generated using free Hugging Face API",
+            provider: "Google Imagen 3.0",
+            note: "Generated using Google's Imagen 3.0 model",
           })
         }
+      } else {
+        const errorData = await imagenResponse.json().catch(() => ({}))
+        console.error("Imagen 3.0 API error:", imagenResponse.status, errorData)
       }
-    } catch (hfError) {
-      console.error("Hugging Face error:", hfError)
+    } catch (imagenError) {
+      console.error("Imagen 3.0 error:", imagenError)
     }
 
-    // Final fallback to placeholder
-    const placeholderUrl = `https://picsum.photos/${dimensions.width}/${dimensions.height}?random=${Date.now()}`
+    // Fallback to placeholder if Imagen 3.0 fails
+    const placeholderUrl = `https://picsum.photos/512/512?random=${Date.now()}`
 
     return NextResponse.json({
       success: true,
@@ -160,8 +129,8 @@ export async function POST(request: NextRequest) {
       aspectRatio: aspectRatio || "1:1",
       provider: "Placeholder",
       isPlaceholder: true,
-      note: "Using placeholder image. Please sign in to access AI generation.",
-      showSetupGuide: false,
+      note: "Imagen 3.0 API not configured. Please set up Google Cloud credentials.",
+      showSetupGuide: true,
     })
   } catch (error) {
     console.error("Generation error:", error)

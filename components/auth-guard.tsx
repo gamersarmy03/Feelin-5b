@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogIn, Sparkles, AlertCircle } from "lucide-react"
+import { LogIn, Sparkles, AlertCircle, RefreshCw } from "lucide-react"
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -13,14 +13,17 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
-  const { isAuthenticated, loading, login, configError } = useAuth()
-  const [loginError, setLoginError] = useState<string | null>(null)
+  const { isAuthenticated, loading, login, configError, loginError } = useAuth()
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   // Show loading state during SSR and initial client load
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     )
   }
@@ -45,6 +48,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
                 <li>NEXT_PUBLIC_APPWRITE_PROJECT_ID</li>
                 <li>NEXT_PUBLIC_APPWRITE_DATABASE_ID</li>
                 <li>NEXT_PUBLIC_APPWRITE_IMAGES_COLLECTION_ID</li>
+                <li>NEXT_PUBLIC_APP_URL (for OAuth redirects)</li>
               </ul>
             </div>
           </CardContent>
@@ -54,12 +58,16 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   }
 
   const handleLogin = async () => {
+    if (isLoggingIn) return
+
     try {
-      setLoginError(null)
+      setIsLoggingIn(true)
       await login()
     } catch (error) {
       console.error("Login failed:", error)
-      setLoginError(error instanceof Error ? error.message : "Login failed")
+      // Error is already handled in useAuth hook
+    } finally {
+      setIsLoggingIn(false)
     }
   }
 
@@ -78,17 +86,42 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
             <CardContent>
               <Button
                 onClick={handleLogin}
+                disabled={isLoggingIn}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign in with Google
+                {isLoggingIn ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign in with Google
+                  </>
+                )}
               </Button>
 
               {loginError && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-600">{loginError}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.location.reload()}
+                    className="mt-2 h-6 px-2 text-xs"
+                  >
+                    Retry
+                  </Button>
                 </div>
               )}
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-xs text-blue-600">
+                  <strong>Setup Required:</strong> Make sure NEXT_PUBLIC_APP_URL is set to your domain in environment
+                  variables.
+                </p>
+              </div>
 
               <p className="text-xs text-gray-500 text-center mt-4">
                 Your images will be stored securely and backed up to Internet Archive

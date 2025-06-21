@@ -1,4 +1,4 @@
-# Ideogram.ai Clone
+# Ideogram.ai Clone - Imagen 3.0 Edition
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
@@ -7,17 +7,25 @@
 
 ## Overview
 
-A modern AI image generation platform inspired by Ideogram.ai, built with Next.js, Appwrite, and multiple AI providers.
+A modern AI image generation platform powered exclusively by Google's Imagen 3.0 model, built with Next.js 14, Appwrite, and Google Cloud Vertex AI.
 
 ## Features
 
-- 🎨 **AI Image Generation** - Multiple AI providers (Pollinations AI, Hugging Face)
+- 🎨 **Google Imagen 3.0** - Latest and highest quality AI image generation
 - 🔐 **Google Authentication** - Secure login with Appwrite
 - 📦 **Internet Archive Backup** - Automatic image archival
 - 💾 **Database Storage** - Image metadata and user management
 - 📱 **Responsive Design** - Works on all devices
 - 🎯 **Multiple Styles** - Realistic, Digital Art, Anime, 3D Render, etc.
 - 📐 **Aspect Ratios** - 1:1, 16:9, 9:16 support
+
+## AI Model
+
+This application uses **Google's Imagen 3.0** (`imagen-3.0-generate-002`) exclusively:
+- **Highest Quality**: State-of-the-art image generation
+- **Latest Technology**: Google's most advanced model
+- **Enterprise Grade**: Reliable and scalable
+- **Multiple Formats**: Supports various aspect ratios
 
 ## Environment Variables
 
@@ -32,9 +40,27 @@ NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
 
 ### Required (Server-side)
 \`\`\`env
+# Google Cloud Authentication (choose one)
+GOOGLE_CLOUD_ACCESS_TOKEN=your_access_token
+# OR
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+
+# Internet Archive (optional)
 INTERNET_ARCHIVE_ACCESS_KEY=your_access_key
 INTERNET_ARCHIVE_SECRET_KEY=your_secret_key
 \`\`\`
+
+## Google Cloud Setup
+
+1. **Create Google Cloud Project**
+2. **Enable APIs**:
+   - Vertex AI API
+   - Imagen API
+3. **Create Service Account** with Vertex AI permissions
+4. **Authentication** (choose one):
+   - Set `GOOGLE_CLOUD_ACCESS_TOKEN` environment variable
+   - Set `GOOGLE_APPLICATION_CREDENTIALS` to service account JSON path
+   - Use `gcloud auth application-default login`
 
 ## Deployment
 
@@ -45,19 +71,33 @@ Your project is live at:
 ## Setup Instructions
 
 1. **Clone the repository**
-2. **Set up Appwrite**:
-   - Create a new project
-   - Set up Google OAuth
+2. **Set up Google Cloud**:
+   - Create project and enable Vertex AI + Imagen APIs
+   - Create service account with proper permissions
+   - Get authentication credentials
+3. **Set up Appwrite**:
+   - Create project and configure OAuth
    - Create database and collections
-3. **Configure environment variables**
-4. **Deploy to Vercel**
+4. **Configure environment variables**
+5. **Update project ID** in `app/api/generate/route.ts`
+6. **Deploy to Vercel**
 
 ## Security
 
-- ✅ **Server-side credentials** - Sensitive keys are kept on the server
+- ✅ **Server-side credentials** - Google Cloud keys kept secure
 - ✅ **OAuth authentication** - Secure Google login
-- ✅ **Input validation** - All user inputs are validated
-- ✅ **CORS handling** - Proper cross-origin resource sharing
+- ✅ **Input validation** - All prompts validated
+- ✅ **Enterprise API** - Google Cloud Vertex AI
+
+## Tech Stack
+
+- **Framework**: Next.js 14
+- **AI Model**: Google Imagen 3.0
+- **Authentication**: Appwrite + Google OAuth
+- **Database**: Appwrite Database
+- **Storage**: Internet Archive
+- **Deployment**: Vercel
+- **Styling**: Tailwind CSS + shadcn/ui
 
 ## Build your app
 
@@ -67,7 +107,9 @@ Continue building your app on:
 
 ## How It Works
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+1. User enters prompt and selects style/aspect ratio
+2. Enhanced prompt sent to Google Imagen 3.0 via Vertex AI
+3. High-quality image generated and returned as base64
+4. Image automatically backed up to Internet Archive
+5. Metadata saved to Appwrite database
+6. Image displayed in responsive gallery

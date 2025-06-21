@@ -5,7 +5,10 @@ const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT
 const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID
 
 if (!endpoint || !projectId) {
-  console.error("Missing required Appwrite environment variables")
+  console.error("Missing required Appwrite environment variables:", {
+    endpoint: !!endpoint,
+    projectId: !!projectId,
+  })
 }
 
 const client = new Client()
@@ -25,5 +28,21 @@ export const STORAGE_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET
 
 // Validate configuration
 export const isAppwriteConfigured = () => {
-  return !!(endpoint && projectId && DATABASE_ID && IMAGES_COLLECTION_ID)
+  const hasBasicConfig = !!(endpoint && projectId && DATABASE_ID && IMAGES_COLLECTION_ID)
+  const hasAppUrl = !!process.env.NEXT_PUBLIC_APP_URL
+
+  if (!hasBasicConfig) {
+    console.error("Missing Appwrite configuration:", {
+      endpoint: !!endpoint,
+      projectId: !!projectId,
+      databaseId: !!DATABASE_ID,
+      collectionId: !!IMAGES_COLLECTION_ID,
+    })
+  }
+
+  if (!hasAppUrl) {
+    console.warn("NEXT_PUBLIC_APP_URL not set - OAuth redirects may fail")
+  }
+
+  return hasBasicConfig
 }

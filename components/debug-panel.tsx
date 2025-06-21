@@ -8,15 +8,10 @@ import { ChevronDown, Bug, CheckCircle, XCircle, TestTube, Settings } from "luci
 
 interface APIStatus {
   apis: {
-    fal: {
+    imagen: {
       configured: boolean
-      keyLength: number
-      keyPreview: string
-    }
-    lightx: {
-      configured: boolean
-      keyLength: number
-      keyPreview: string
+      model: string
+      endpoint: string
     }
   }
   recommendations: string[]
@@ -144,33 +139,27 @@ export function DebugPanel() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">Fal AI:</span>
+                  <span className="text-xs text-gray-600">Google Imagen 3.0:</span>
                   <div className="flex items-center gap-2">
-                    <Badge variant={configStatus.apis.fal.configured ? "default" : "outline"}>
-                      {configStatus.apis.fal.configured ? "Configured" : "Not Set"}
+                    <Badge variant={configStatus.apis.imagen.configured ? "default" : "outline"}>
+                      {configStatus.apis.imagen.configured ? "Configured" : "Not Set"}
                     </Badge>
-                    {configStatus.apis.fal.configured && (
-                      <span className="text-xs text-gray-500">{configStatus.apis.fal.keyPreview}</span>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">LightX AI:</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={configStatus.apis.lightx.configured ? "default" : "outline"}>
-                      {configStatus.apis.lightx.configured ? "Configured" : "Not Set"}
-                    </Badge>
-                    {configStatus.apis.lightx.configured && (
-                      <span className="text-xs text-gray-500">{configStatus.apis.lightx.keyPreview}</span>
-                    )}
-                  </div>
+                <div className="text-xs text-gray-500">
+                  <p>
+                    <strong>Model:</strong> {configStatus.apis.imagen.model}
+                  </p>
+                  <p>
+                    <strong>Endpoint:</strong> {configStatus.apis.imagen.endpoint}
+                  </p>
                 </div>
               </div>
 
               {configStatus.recommendations.length > 0 && (
                 <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                  <div className="font-medium text-yellow-800 mb-1">Recommendations:</div>
+                  <div className="font-medium text-yellow-800 mb-1">Setup Required:</div>
                   {configStatus.recommendations.map((rec, index) => (
                     <div key={index} className="text-yellow-700">
                       • {rec}
@@ -202,7 +191,7 @@ export function DebugPanel() {
             </Button>
 
             <Button onClick={testGenerationAPI} disabled={isLoading} size="sm" className="w-full">
-              {isLoading ? "Testing..." : "Test Generation API"}
+              {isLoading ? "Testing..." : "Test Imagen 3.0 Generation"}
             </Button>
           </div>
 
@@ -219,16 +208,16 @@ export function DebugPanel() {
           {/* Service Info */}
           <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
             <p>
-              <strong>Primary:</strong> Fal AI (FLUX Schnell)
+              <strong>Primary:</strong> Google Imagen 3.0
             </p>
             <p>
-              <strong>Secondary:</strong> LightX AI (Multiple Endpoints)
+              <strong>Model:</strong> imagen-3.0-generate-002
             </p>
             <p>
-              <strong>Free Fallback:</strong> Pollinations AI
+              <strong>Endpoint:</strong> Vertex AI
             </p>
             <p>
-              <strong>Final Fallback:</strong> Hugging Face
+              <strong>Fallback:</strong> Placeholder images
             </p>
           </div>
         </CardContent>

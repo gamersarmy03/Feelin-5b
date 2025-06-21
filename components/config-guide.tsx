@@ -33,7 +33,7 @@ export function ConfigGuide({ isOpen, onClose }: ConfigGuideProps) {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Key className="w-5 h-5" />
-              API Configuration Guide
+              Imagen 3.0 Configuration Guide
             </CardTitle>
             <Button onClick={onClose} variant="ghost" size="sm" className="h-8 w-8 p-0">
               <X className="w-4 h-4" />
@@ -41,120 +41,100 @@ export function ConfigGuide({ isOpen, onClose }: ConfigGuideProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* LightX AI Configuration */}
+          {/* Google Cloud Setup */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className="bg-blue-500">Built-in</Badge>
-              <h3 className="font-semibold">LightX AI Configuration</h3>
+              <Badge className="bg-blue-500">Required</Badge>
+              <h3 className="font-semibold">Google Cloud Setup</h3>
             </div>
 
             <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-              <div className="bg-green-50 border border-green-200 p-3 rounded">
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-green-600 mt-0.5" />
-                  <div className="text-sm text-green-800">
-                    <strong>Already Configured:</strong> LightX API key is built into the application.
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <p className="text-sm text-gray-700">
-                  The application includes a LightX API key for immediate use. For production or custom usage:
-                </p>
-                <p className="text-sm text-gray-700">
-                  1. Visit{" "}
+                  1. Go to{" "}
                   <a
-                    href="https://lightx.ai"
+                    href="https://console.cloud.google.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline inline-flex items-center gap-1"
                   >
-                    lightx.ai <ExternalLink className="w-3 h-3" />
-                  </a>{" "}
-                  and create an account
+                    Google Cloud Console <ExternalLink className="w-3 h-3" />
+                  </a>
                 </p>
-                <p className="text-sm text-gray-700">2. Generate your own API key</p>
-                <p className="text-sm text-gray-700">3. Add the environment variable:</p>
-              </div>
-
-              <div className="bg-black text-green-400 p-3 rounded font-mono text-sm flex items-center justify-between">
-                <span>LIGHTX_API_KEY=your_lightx_api_key_here</span>
-                <Button
-                  onClick={() => copyToClipboard("LIGHTX_API_KEY=your_lightx_api_key_here", "lightx")}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
-                >
-                  {copiedKey === "lightx" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                </Button>
-              </div>
-
-              <div className="text-xs text-gray-600">
-                <strong>Benefits:</strong> Good quality generation, reliable service, competitive pricing
+                <p className="text-sm text-gray-700">2. Create a new project or select existing one</p>
+                <p className="text-sm text-gray-700">3. Enable the Vertex AI API</p>
+                <p className="text-sm text-gray-700">4. Enable the Imagen API</p>
+                <p className="text-sm text-gray-700">5. Create a service account with Vertex AI permissions</p>
+                <p className="text-sm text-gray-700">6. Generate and download the service account key (JSON)</p>
               </div>
             </div>
           </div>
 
-          {/* Fal AI Configuration */}
+          {/* Authentication Setup */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className="bg-green-500">Recommended</Badge>
-              <h3 className="font-semibold">Fal AI Configuration</h3>
+              <Badge className="bg-green-500">Authentication</Badge>
+              <h3 className="font-semibold">Service Account Authentication</h3>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg space-y-3">
               <div className="space-y-2">
-                <p className="text-sm text-gray-700">
-                  1. Visit{" "}
-                  <a
-                    href="https://fal.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                  >
-                    fal.ai <ExternalLink className="w-3 h-3" />
-                  </a>{" "}
-                  and create an account
-                </p>
-                <p className="text-sm text-gray-700">2. Add billing information (required for API access)</p>
-                <p className="text-sm text-gray-700">3. Go to your dashboard and generate an API key</p>
-                <p className="text-sm text-gray-700">4. Add the environment variable:</p>
-              </div>
+                <p className="text-sm text-gray-700">1. Use Google Cloud SDK to authenticate:</p>
+                <div className="bg-black text-green-400 p-3 rounded font-mono text-sm">
+                  <div>gcloud auth application-default login</div>
+                </div>
 
-              <div className="bg-black text-green-400 p-3 rounded font-mono text-sm flex items-center justify-between">
-                <span>FAL_KEY=your_fal_api_key_here</span>
-                <Button
-                  onClick={() => copyToClipboard("FAL_KEY=your_fal_api_key_here", "fal")}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
-                >
-                  {copiedKey === "fal" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                </Button>
+                <p className="text-sm text-gray-700 mt-3">2. Or set the service account key file path:</p>
+                <div className="bg-black text-green-400 p-3 rounded font-mono text-sm flex items-center justify-between">
+                  <span>GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json</span>
+                  <Button
+                    onClick={() =>
+                      copyToClipboard("GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json", "gac")
+                    }
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
+                  >
+                    {copiedKey === "gac" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
+
+                <p className="text-sm text-gray-700 mt-3">3. Or get an access token and set:</p>
+                <div className="bg-black text-green-400 p-3 rounded font-mono text-sm flex items-center justify-between">
+                  <span>GOOGLE_CLOUD_ACCESS_TOKEN=your_access_token</span>
+                  <Button
+                    onClick={() => copyToClipboard("GOOGLE_CLOUD_ACCESS_TOKEN=your_access_token", "token")}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
+                  >
+                    {copiedKey === "token" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
               </div>
 
               <div className="text-xs text-gray-600">
-                <strong>Benefits:</strong> Fastest generation (2-4 seconds), highest quality, cost-effective (~$0.003
-                per image)
+                <strong>Benefits:</strong> Highest quality AI image generation, Google's latest model, enterprise-grade
+                reliability
               </div>
             </div>
           </div>
 
-          {/* Free Alternative */}
+          {/* Project Configuration */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">Free Fallback</Badge>
-              <h3 className="font-semibold">Hugging Face (Automatic)</h3>
-            </div>
+            <h3 className="font-semibold">Project Configuration</h3>
 
-            <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+            <div className="bg-purple-50 p-4 rounded-lg space-y-3">
               <p className="text-sm text-gray-700">
-                If no paid APIs are configured, the system automatically tries Hugging Face's free inference API as a
-                fallback.
+                Update the API endpoint in <code>app/api/generate/route.ts</code>:
               </p>
-              <div className="text-xs text-gray-600">
-                <strong>Limitations:</strong> Slower generation, basic models, rate limits
+
+              <div className="bg-black text-green-400 p-3 rounded font-mono text-sm">
+                <div>// Replace YOUR_PROJECT_ID with your actual project ID</div>
+                <div>
+                  const endpoint =
+                  `https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT_ID/locations/us-central1/publishers/google/models/imagen-3.0-generate-002:predict`
+                </div>
               </div>
             </div>
           </div>
@@ -169,10 +149,10 @@ export function ConfigGuide({ isOpen, onClose }: ConfigGuideProps) {
               </p>
 
               <div className="bg-black text-green-400 p-3 rounded font-mono text-sm">
-                <div># Fal AI (Recommended for best quality)</div>
-                <div>FAL_KEY=your_fal_api_key_here</div>
-                <div className="mt-2"># LightX AI (Optional - built-in key available)</div>
-                <div>LIGHTX_API_KEY=your_lightx_api_key_here</div>
+                <div># Google Cloud Authentication</div>
+                <div>GOOGLE_CLOUD_ACCESS_TOKEN=your_access_token</div>
+                <div className="mt-2"># Or use service account file</div>
+                <div>GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json</div>
               </div>
 
               <p className="text-xs text-gray-600">
@@ -189,7 +169,7 @@ export function ConfigGuide({ isOpen, onClose }: ConfigGuideProps) {
               <p className="text-sm text-gray-700">1. Go to your Vercel project dashboard</p>
               <p className="text-sm text-gray-700">2. Navigate to Settings → Environment Variables</p>
               <p className="text-sm text-gray-700">
-                3. Add the variables for all environments (Production, Preview, Development)
+                3. Add GOOGLE_CLOUD_ACCESS_TOKEN for all environments (Production, Preview, Development)
               </p>
               <p className="text-sm text-gray-700">4. Redeploy your application</p>
             </div>
