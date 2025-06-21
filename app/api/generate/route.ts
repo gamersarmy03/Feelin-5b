@@ -137,8 +137,10 @@ export async function POST(request: NextRequest) {
               prompt: enhancedPrompt,
               width: dimensions.width,
               height: dimensions.height,
-              num_inference_steps: 20,
-              guidance_scale: 7.5,
+              num_inference_steps: 30, // Increased for better quality
+              guidance_scale: 8.5, // Increased for better prompt adherence
+              quality: "high",
+              enhance: true,
             },
           },
           {
@@ -151,6 +153,8 @@ export async function POST(request: NextRequest) {
               text: enhancedPrompt,
               size: `${dimensions.width}x${dimensions.height}`,
               style: style !== "auto" ? style : "realistic",
+              quality: "high",
+              steps: 30,
             },
           },
           {
@@ -163,6 +167,26 @@ export async function POST(request: NextRequest) {
               prompt: enhancedPrompt,
               image_size: aspectRatio === "16:9" ? "landscape" : aspectRatio === "9:16" ? "portrait" : "square",
               model: "stable-diffusion-xl",
+              quality: "high",
+              steps: 30,
+            },
+          },
+          {
+            url: "https://api.lightx.ai/v1/generate-image",
+            headers: {
+              Authorization: `Bearer ${LIGHTX_API_KEY}`,
+              "Content-Type": "application/json",
+              "X-API-Key": LIGHTX_API_KEY,
+            },
+            body: {
+              prompt: enhancedPrompt,
+              width: dimensions.width,
+              height: dimensions.height,
+              steps: 30, // Increased for better quality
+              cfg_scale: 8.5, // Increased for better prompt adherence
+              sampler: "DPM++ 2M Karras",
+              quality: "high",
+              enhance: true,
             },
           },
         ]
@@ -233,8 +257,8 @@ export async function POST(request: NextRequest) {
     try {
       console.log("Attempting Pollinations AI generation...")
 
-      // Pollinations AI is a free service that works well
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${dimensions.width}&height=${dimensions.height}&seed=${Date.now()}&model=flux`
+      // Use a different model and add parameters to improve quality and remove watermarks
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${dimensions.width}&height=${dimensions.height}&seed=${Date.now()}&model=flux&nologo=true&enhance=true&quality=high`
 
       const pollinationsResponse = await fetch(pollinationsUrl, {
         method: "GET",
@@ -247,17 +271,12 @@ export async function POST(request: NextRequest) {
         // Check if response is actually an image
         const contentType = pollinationsResponse.headers.get("content-type")
         if (contentType && contentType.startsWith("image/")) {
-          // Pollinations returns the image directly
-          const imageBlob = await pollinationsResponse.blob()
-
-          // Convert blob to base64 for display
-          const buffer = await imageBlob.arrayBuffer()
-          const base64 = Buffer.from(buffer).toString("base64")
-          const dataUrl = `data:${contentType};base64,${base64}`
+          // Return the direct URL instead of converting to base64 for better quality
+          const imageUrl = pollinationsUrl
 
           return NextResponse.json({
             success: true,
-            imageUrl: dataUrl,
+            imageUrl: imageUrl,
             id: Date.now().toString(),
             prompt: prompt,
             style: style || "auto",
@@ -279,20 +298,25 @@ export async function POST(request: NextRequest) {
     try {
       console.log("Attempting Hugging Face generation as fallback...")
 
-      const hfResponse = await fetch("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; IdeogramClone/1.0)",
-        },
-        body: JSON.stringify({
-          inputs: enhancedPrompt,
-          parameters: {
-            num_inference_steps: 20,
-            guidance_scale: 7.5,
+      const hfResponse = await fetch(
+        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; IdeogramClone/1.0)",
           },
-        }),
-      })
+          body: JSON.stringify({
+            inputs: enhancedPrompt,
+            parameters: {
+              num_inference_steps: 25, // Increased for better quality
+              guidance_scale: 8.0, // Increased for better prompt adherence
+              width: dimensions.width,
+              height: dimensions.height,
+            },
+          }),
+        },
+      )
 
       if (hfResponse.ok) {
         const contentType = hfResponse.headers.get("content-type")

@@ -27,6 +27,7 @@ import Image from "next/image"
 import { useImageGeneration } from "@/hooks/use-image-generation"
 import { DebugPanel } from "@/components/debug-panel"
 import { ConfigGuide } from "@/components/config-guide"
+import { downloadImage, shareImage } from "@/utils/download-image"
 
 const sampleImages = [
   {
@@ -128,7 +129,12 @@ function SafeImage({
         className={className}
         onError={() => setError(true)}
         onLoad={() => setLoading(false)}
-        unoptimized={src.startsWith("data:") || src.includes("picsum.photos") || src.includes("pollinations")}
+        unoptimized={
+          src.startsWith("data:") ||
+          src.includes("picsum.photos") ||
+          src.includes("pollinations") ||
+          src.includes("huggingface")
+        }
       />
     </div>
   )
@@ -405,11 +411,29 @@ export default function IdeogramClone() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
+                                const filename = `${image.prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, "-")}-${timestamp}.png`
+                                await downloadImage(image.url, filename)
+                              } catch (error) {
+                                alert(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+                              }
+                            }}
+                          >
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                await shareImage(image.url, image.prompt)
+                              } catch (error) {
+                                alert(`Share failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+                              }
+                            }}
+                          >
                             <Share2 className="w-4 h-4 mr-2" />
                             Share
                           </DropdownMenuItem>
