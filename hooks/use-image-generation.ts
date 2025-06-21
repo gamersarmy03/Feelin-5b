@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "./use-auth"
+import { databaseService } from "@/lib/database"
+import { storageService } from "@/lib/storage"
 
 interface GenerationParams {
   prompt: string
@@ -18,13 +21,15 @@ interface GeneratedImage {
   isPlaceholder?: boolean
   note?: string
   provider?: string
+  archiveUrl?: string
+  likes?: number
 }
 
 export function useImageGeneration() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [showSetupGuide, setShowSetupGuide] = useState(false)
+  const { user, isAuthenticated } = useAuth()
 
   const generateImage = async ({ prompt, style, aspectRatio }: GenerationParams) => {
     if (!prompt.trim()) {
@@ -32,9 +37,13 @@ export function useImageGeneration() {
       return null
     }
 
+    if (!isAuthenticated) {
+      setError("Please sign in with Google to generate images")
+      return null
+    }
+
     setIsGenerating(true)
     setError(null)
-    setShowSetupGuide(false)
 
     try {
       const response = await fetch("/api/generate", {
@@ -51,20 +60,7 @@ export function useImageGeneration() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Network error occurred" }))
-
-        // Handle specific error types
-        if (errorData.isBillingError) {
-          setError(`${errorData.provider} requires billing setup. Please set up billing or use Fal AI instead.`)
-        } else if (errorData.isConfigurationError) {
-          setError("API configuration required. Click 'Setup Guide' for instructions.")
-        } else {
-          setError(errorData.error || `HTTP ${response.status}: Failed to generate image`)
-        }
-
-        if (errorData.showSetupGuide) {
-          setShowSetupGuide(true)
-        }
-
+        setError(errorData.error || `HTTP ${response.status}: Failed to generate image`)
         return null
       }
 
@@ -73,6 +69,51 @@ export function useImageGeneration() {
       if (!data.success) {
         setError(data.error || "Failed to generate image")
         return null
+      }
+
+      // Upload to Internet Archive if it's a real generated image
+      let archiveUrl = ""
+      if (!data.isPlaceholder && user) {
+        try {
+          console.log("Uploading to Internet Archive...")
+
+          // Download the image as blob
+          const imageBlob = await storageService.downloadImageAsBlob(data.imageUrl)
+
+          // Upload to Internet Archive
+          const uploadResult = await storageService.uploadToInternetArchive(imageBlob, `${data.id}.png`, {
+            title: `AI Generated Image: ${prompt.slice(0, 50)}`,
+            description: `Generated with prompt: "${prompt}" using ${data.provider}`,
+            creator: user.name || user.email,
+            subject: `AI Art, ${style}, Generated Image`,
+          })
+
+          archiveUrl = uploadResult.archiveUrl
+          console.log("Successfully uploaded to Internet Archive:", archiveUrl)
+        } catch (uploadError) {
+          console.error("Failed to upload to Internet Archive:", uploadError)
+          // Continue without archive URL
+        }
+      }
+
+      // Save to database
+      if (user) {
+        try {
+          await databaseService.createImageRecord({
+            userId: user.$id,
+            prompt: data.prompt || prompt,
+            style: data.style || style,
+            aspectRatio: data.aspectRatio || aspectRatio,
+            imageUrl: data.imageUrl,
+            archiveUrl,
+            provider: data.provider || "Unknown",
+            isPlaceholder: data.isPlaceholder || false,
+            note: data.note,
+          })
+        } catch (dbError) {
+          console.error("Failed to save to database:", dbError)
+          // Continue without saving to database
+        }
       }
 
       const newImage: GeneratedImage = {
@@ -85,17 +126,14 @@ export function useImageGeneration() {
         isPlaceholder: data.isPlaceholder || false,
         note: data.note,
         provider: data.provider,
+        archiveUrl,
+        likes: 0,
       }
 
       setGeneratedImages((prev) => [newImage, ...prev])
 
-      // Show appropriate message based on response type
       if (data.isPlaceholder) {
-        setError("Using placeholder image - API setup required for AI generation")
-        setShowSetupGuide(true)
-      } else if (data.note && data.provider !== "Pollinations AI (Free)") {
-        // Only show notes as errors if they're not from successful free generation
-        console.log("Generation note:", data.note)
+        setError("Please sign in with Google to access AI image generation")
       }
 
       return newImage
@@ -114,10 +152,6 @@ export function useImageGeneration() {
     isGenerating,
     generatedImages,
     error,
-    showSetupGuide,
-    clearError: () => {
-      setError(null)
-      setShowSetupGuide(false)
-    },
+    clearError: () => setError(null),
   }
 }

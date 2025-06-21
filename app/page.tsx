@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,72 +19,16 @@ import {
   User,
   Settings,
   LogOut,
-  Zap,
   ImageIcon,
   Palette,
+  ExternalLink,
 } from "lucide-react"
 import Image from "next/image"
 import { useImageGeneration } from "@/hooks/use-image-generation"
-import { DebugPanel } from "@/components/debug-panel"
-import { ConfigGuide } from "@/components/config-guide"
+import { useAuth } from "@/hooks/use-auth"
+import { AuthGuard } from "@/components/auth-guard"
 import { downloadImage, shareImage } from "@/utils/download-image"
-
-const sampleImages = [
-  {
-    id: 1,
-    url: "/placeholder.svg?height=400&width=400",
-    prompt: "A majestic dragon soaring through clouds at sunset, digital art style",
-    style: "Digital Art",
-    likes: 234,
-    user: "ArtistPro",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 2,
-    url: "/placeholder.svg?height=400&width=600",
-    prompt: "Cyberpunk cityscape with neon lights reflecting on wet streets",
-    style: "Cyberpunk",
-    likes: 189,
-    user: "NeonDreamer",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 3,
-    url: "/placeholder.svg?height=600&width=400",
-    prompt: "Minimalist mountain landscape in pastel colors, vector illustration",
-    style: "Minimalist",
-    likes: 156,
-    user: "VectorArt",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 4,
-    url: "/placeholder.svg?height=400&width=400",
-    prompt: "Steampunk mechanical owl with brass gears and copper details",
-    style: "Steampunk",
-    likes: 298,
-    user: "GearMaster",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 5,
-    url: "/placeholder.svg?height=500&width=400",
-    prompt: "Watercolor painting of a serene Japanese garden with cherry blossoms",
-    style: "Watercolor",
-    likes: 167,
-    user: "ZenArtist",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 6,
-    url: "/placeholder.svg?height=400&width=500",
-    prompt: "Abstract geometric composition with vibrant colors and sharp angles",
-    style: "Abstract",
-    likes: 203,
-    user: "GeometryFan",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-]
+import { databaseService } from "@/lib/database"
 
 // Custom Image component with error handling
 function SafeImage({
@@ -140,12 +84,30 @@ function SafeImage({
   )
 }
 
-export default function IdeogramClone() {
+function IdeogramApp() {
   const [prompt, setPrompt] = useState("")
-  const { generateImage, isGenerating, generatedImages, error, showSetupGuide, clearError } = useImageGeneration()
+  const { generateImage, isGenerating, generatedImages, error, clearError } = useImageGeneration()
+  const { user, logout } = useAuth()
   const [selectedStyle, setSelectedStyle] = useState("auto")
   const [aspectRatio, setAspectRatio] = useState("1:1")
-  const [showConfigGuide, setShowConfigGuide] = useState(false)
+  const [publicImages, setPublicImages] = useState<any[]>([])
+  const [loadingPublicImages, setLoadingPublicImages] = useState(true)
+
+  // Load public images on component mount
+  useEffect(() => {
+    loadPublicImages()
+  }, [])
+
+  const loadPublicImages = async () => {
+    try {
+      const images = await databaseService.getPublicImages(12)
+      setPublicImages(images)
+    } catch (error) {
+      console.error("Failed to load public images:", error)
+    } finally {
+      setLoadingPublicImages(false)
+    }
+  }
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -156,9 +118,9 @@ export default function IdeogramClone() {
       aspectRatio,
     })
 
-    if (result) {
-      // Optionally clear the prompt after successful generation
-      // setPrompt("")
+    if (result && !result.isPlaceholder) {
+      // Refresh public images to show the new one
+      loadPublicImages()
     }
   }
 
@@ -166,6 +128,18 @@ export default function IdeogramClone() {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleGenerate()
+    }
+  }
+
+  const handleLike = async (imageId: string, currentLikes: number) => {
+    try {
+      const newLikes = currentLikes + 1
+      await databaseService.updateImageLikes(imageId, newLikes)
+
+      // Update local state
+      setPublicImages((prev) => prev.map((img) => (img.$id === imageId ? { ...img, likes: newLikes } : img)))
+    } catch (error) {
+      console.error("Failed to update likes:", error)
     }
   }
 
@@ -196,35 +170,33 @@ export default function IdeogramClone() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="hidden md:flex">
-                <Zap className="w-4 h-4 mr-2" />
-                Upgrade
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src="/placeholder.svg?height=24&width=24" />
-                      <AvatarFallback>U</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden md:inline">User</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                        <AvatarFallback>{user.name?.[0] || user.email[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="hidden md:inline">{user.name || user.email}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </div>
@@ -304,50 +276,17 @@ export default function IdeogramClone() {
                   </Button>
 
                   {error && (
-                    <div
-                      className={`p-3 border rounded-md ${
-                        error.includes("placeholder") || error.includes("progress")
-                          ? "bg-blue-50 border-blue-200"
-                          : error.includes("API keys") || error.includes("billing") || error.includes("setup")
-                            ? "bg-orange-50 border-orange-200"
-                            : "bg-red-50 border-red-200"
-                      }`}
-                    >
-                      <p
-                        className={`text-sm ${
-                          error.includes("placeholder") || error.includes("progress")
-                            ? "text-blue-700"
-                            : error.includes("API keys") || error.includes("billing") || error.includes("setup")
-                              ? "text-orange-700"
-                              : "text-red-600"
-                        }`}
-                      >
-                        {error}
-                      </p>
-                      <div className="flex gap-2 mt-2">
-                        <Button variant="ghost" size="sm" onClick={clearError} className="h-6 px-2 text-xs">
-                          Dismiss
-                        </Button>
-                        {(error.includes("API keys") ||
-                          error.includes("billing") ||
-                          error.includes("setup") ||
-                          showSetupGuide) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowConfigGuide(true)}
-                            className="h-6 px-2 text-xs"
-                          >
-                            Setup Guide
-                          </Button>
-                        )}
-                      </div>
+                    <div className="p-3 border rounded-md bg-red-50 border-red-200">
+                      <p className="text-sm text-red-600">{error}</p>
+                      <Button variant="ghost" size="sm" onClick={clearError} className="h-6 px-2 text-xs mt-2">
+                        Dismiss
+                      </Button>
                     </div>
                   )}
 
                   <div className="text-xs text-gray-500 text-center">
-                    <p>Multi-API Image Generation</p>
-                    <p className="mt-1">Fal AI • LightX AI • Pollinations • Fallback Support</p>
+                    <p>Free AI Image Generation</p>
+                    <p className="mt-1">Powered by Pollinations AI • Backed up to Internet Archive</p>
                   </div>
                 </div>
               </CardContent>
@@ -367,20 +306,8 @@ export default function IdeogramClone() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                ...generatedImages.map((img) => ({
-                  id: img.id,
-                  url: img.url,
-                  prompt: img.prompt,
-                  style: img.style,
-                  likes: 0,
-                  user: "You",
-                  avatar: "/placeholder.svg?height=32&width=32",
-                  isNew: true,
-                  provider: img.provider,
-                })),
-                ...sampleImages,
-              ].map((image) => (
+              {/* User's generated images */}
+              {generatedImages.map((image) => (
                 <Card key={image.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="relative">
                     <SafeImage
@@ -390,11 +317,9 @@ export default function IdeogramClone() {
                       height={400}
                       className="w-full h-64 object-cover"
                     />
-                    {image.isNew && (
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-green-500 hover:bg-green-600">New</Badge>
-                      </div>
-                    )}
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-green-500 hover:bg-green-600">New</Badge>
+                    </div>
                     {image.provider && (
                       <div className="absolute bottom-3 left-3">
                         <Badge variant="secondary" className="text-xs">
@@ -437,6 +362,12 @@ export default function IdeogramClone() {
                             <Share2 className="w-4 h-4 mr-2" />
                             Share
                           </DropdownMenuItem>
+                          {image.archiveUrl && (
+                            <DropdownMenuItem onClick={() => window.open(image.archiveUrl, "_blank")}>
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              View on Archive
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -446,32 +377,137 @@ export default function IdeogramClone() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={image.avatar || "/placeholder.svg"} />
-                          <AvatarFallback>{image.user[0]}</AvatarFallback>
+                          <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+                          <AvatarFallback>{user?.name?.[0] || "Y"}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm text-gray-700">{image.user}</span>
+                        <span className="text-sm text-gray-700">You</span>
                         <Badge variant="secondary" className="text-xs">
                           {image.style}
                         </Badge>
                       </div>
                       <Button variant="ghost" size="sm" className="h-8 px-2">
                         <Heart className="w-4 h-4 mr-1" />
-                        {image.likes}
+                        {image.likes || 0}
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+
+              {/* Public images from database */}
+              {!loadingPublicImages &&
+                publicImages.map((image) => (
+                  <Card key={image.$id} className="group overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="relative">
+                      <SafeImage
+                        src={image.imageUrl || "/placeholder.svg"}
+                        alt={image.prompt}
+                        width={400}
+                        height={400}
+                        className="w-full h-64 object-cover"
+                      />
+                      {image.provider && (
+                        <div className="absolute bottom-3 left-3">
+                          <Badge variant="secondary" className="text-xs">
+                            {image.provider}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                try {
+                                  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
+                                  const filename = `${image.prompt.slice(0, 30).replace(/[^a-zA-Z0-9]/g, "-")}-${timestamp}.png`
+                                  await downloadImage(image.imageUrl, filename)
+                                } catch (error) {
+                                  alert(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+                                }
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                try {
+                                  await shareImage(image.imageUrl, image.prompt)
+                                } catch (error) {
+                                  alert(`Share failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+                                }
+                              }}
+                            >
+                              <Share2 className="w-4 h-4 mr-2" />
+                              Share
+                            </DropdownMenuItem>
+                            {image.archiveUrl && (
+                              <DropdownMenuItem onClick={() => window.open(image.archiveUrl, "_blank")}>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View on Archive
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">{image.prompt}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarFallback>U</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-gray-700">Community</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {image.style}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={() => handleLike(image.$id, image.likes || 0)}
+                        >
+                          <Heart className="w-4 h-4 mr-1" />
+                          {image.likes || 0}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+              {loadingPublicImages && (
+                <div className="col-span-2 text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+                  <p className="text-gray-500 mt-2">Loading community images...</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 text-center">
-              <Button variant="outline">Load More</Button>
+              <Button variant="outline" onClick={loadPublicImages}>
+                Load More
+              </Button>
             </div>
           </div>
         </div>
       </div>
-      <DebugPanel />
-      <ConfigGuide isOpen={showConfigGuide} onClose={() => setShowConfigGuide(false)} />
     </div>
+  )
+}
+
+export default function IdeogramClone() {
+  return (
+    <AuthGuard>
+      <IdeogramApp />
+    </AuthGuard>
   )
 }
